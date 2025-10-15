@@ -60,12 +60,16 @@ def plot_grid_2d(X, Y, z, title, filename=None, labels=("$x$", "$y$"), limits=(-
     fig, ax = plt.subplots(figsize=(5, 5))
 
     Z = z.reshape((len(X), len(Y)))
+    tolerance = 0.5e-6
+    cg_index = np.where(np.isclose(Z, 0, atol=tolerance))
+    print(f"\033[32m[INFO - mesh_plotting]\033[0m CG located at index {cg_index[1][0]},{cg_index[0][0]}")
 
     surf = ax.contourf(X, Y, Z, cmap=cm.viridis)
 
     if plot_rectangle:
-        rect = patches.Rectangle((0, 0), dim[0], dim[1], linewidth=1, edgecolor='r', facecolor='none', label="Bounding box")
+        rect = patches.Rectangle((0, 0), dim[1], dim[0], linewidth=1, edgecolor='r', facecolor='none', label="Bounding box")
         scatter = ax.scatter(dim[0]/2, dim[1]/2, s=100, marker="+", color="red", label="Geometric centre")
+        scatter = ax.scatter(X[cg_index[1][0]], Y[cg_index[0][0]], s=100, marker="+", color="Black", label="Centre of gravity")
         ax.add_patch(rect)
         ax.legend()
 

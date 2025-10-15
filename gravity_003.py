@@ -16,7 +16,7 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
     stl_path = os.path.join(models_path, stl_file)
     voxels_path = os.path.join(data_path, voxels_file)
 
-    print(f"\033[34m[INFO - gravity]\033[0m Config: <save_file>:\033[34m{save_file}\033[0m, <do_2d>:\033[34m{do_2d}\033[0m, <do_3d>:\033[34m{do_3d}\033[0m, <plot>:\033[34m{plot}\033[0m")
+    print(f"\033[36m[INFO - gravity]\033[0m Config: <save_file>:\033[36m{save_file}\033[0m, <do_2d>:\033[36m{do_2d}\033[0m, <do_3d>:\033[36m{do_3d}\033[0m, <plot>:\033[36m{plot}\033[0m")
 
     computation_point = np.array([0, 0, 0])
 
@@ -110,9 +110,9 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
                     )
 
     if do_3d:
-        X = np.arange(0, dim[0], 10)
-        Y = np.arange(0, dim[0], 10)
-        Z = np.arange(0, dim[0], 10)
+        X = np.linspace(0, dim[0], Nx)
+        Y = np.linspace(0, dim[0], Ny)
+        Z = np.linspace(0, dim[0], Nz)
         # Precalculate distance between nodes. This is fine for fixed mesh.
         dx = np.diff(X)[0] # [m]
         dy = np.diff(Y)[0] # [m]
@@ -129,26 +129,28 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
         accelerations_norm = accelerations_norm.reshape(X.shape).T # reshape into meshgrid format
 
 
-        # Make mask for voxel centres
-        data = np.load(voxels_path) # Load the numpyzip file
-        points = data['arr_0']
-        grid_points = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
-        tree = KDTree(points)
-        distances, indices = tree.query(grid_points)
+        # # Make mask for voxel centres
+        # data = np.load(voxels_path) # Load the numpyzip file
+        # points = data['arr_0']
+        # grid_points = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
+        # tree = KDTree(points)
+        # distances, indices = tree.query(grid_points)
 
-        distances = distances.reshape(X.shape)
-        threshold = 3 * np.array([dx, dy, dz]).max(axis=0)
-        mask_exists = distances <= threshold
+        # distances = distances.reshape(X.shape)
+        # threshold = 3 * np.array([dx, dy, dz]).max(axis=0)
+        # mask_exists = distances <= threshold
         if plot:
-            fig, ax = plt.subplots(1,1,figsize=(5,5), subplot_kw={"projection": "3d"})
+            fig, ax = plt.subplots(1,1, figsize=(5,5), subplot_kw={"projection": "3d"})
             mask = (
                 (X>=0) & (X<=dim[0]) &
                 (Y>=0) & (Y<=dim[1]) &
                 (Z>=0) & (Z<=dim[2])
                 )
 
-            ax.scatter(X[mask], Y[mask], Z[mask], c=accelerations_norm[mask], cmap="terrain", s=20, alpha=1)
-            ax.set(xlabel=f"x ({dim[0]}) [m]", ylabel=f"y ({dim[1]}) [m]", zlabel=f"z ({dim[2]}) [m]")
+            scatter = ax.scatter(X[mask], Y[mask], Z[mask], c=accelerations_norm[mask], cmap="terrain", s=20, alpha=1)
+            ax.set(xlabel=f"x ({dim[0]}) [m]", ylabel=f"y ({dim[1]}) [m]", zlabel=f"z ({dim[2]}) [m]", title=rf"$\rho={density}$")
+            fig.colorbar(mappable=scatter, ax=ax, label="[m/s²]")
+            fig.suptitle(f"Gravitational acceleration 3D\n file: <{scaled_stl_file}>")
 
 
     # Save gravitational acceleration magnitude into numpyz file.
@@ -163,6 +165,7 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
         print(f"\033[32m[INFO - gravity]\033[0m acceleration_norm <{accelerations_norm.shape}> <shape> already exists or no save requested.")   
     
     if plot:
+        plt.tight_layout()
         plt.show()
 
 if __name__ == "__main__":
@@ -172,14 +175,14 @@ if __name__ == "__main__":
     dim = [177, 174, 116]
     density = 600 # [kg/m³]
     save_file = False
-    do_2d = False
+    do_2d = True
     do_3d = True
     plot = True
 
     mesh_params = {
-        "Nx": int(50),
-        "Ny": int(50),
-        "Nz": int(50),
+        "Nx": int(20),
+        "Ny": int(20),
+        "Nz": int(20),
         "Lx": int(220),
         "Ly": int(220),
         "Lz": int(220)

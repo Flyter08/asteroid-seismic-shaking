@@ -8,9 +8,11 @@ from matplotlib import colormaps as cm
 def show3d(file_path, mask_exists, plot_pcd=False, plot_voxels=True, save_file=False, colormap='terrain'):
 
     # Data source
-    image_folder = "3D models\\v2\\images"
-    save_image_name = "voxel_image_004.gif"
-    save_image_path = os.path.join(image_folder, save_image_name)
+    cwd = os.getcwd()
+    image_folder = "images"
+    # image_folder = "3D models\\v2\\images"
+    save_image_name = "voxel_image_001.gif"
+    save_image_path = os.path.join(cwd, image_folder, save_image_name)
     data = np.load(file_path)
 
     # Extract -x,-y,-z values from data from the savefile
@@ -25,7 +27,7 @@ def show3d(file_path, mask_exists, plot_pcd=False, plot_voxels=True, save_file=F
 
     mesh_vertices = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
     mask_flat = mask_exists.ravel()
-    print(f"[INFO - show3d] Flattened mask shape {mask_flat.shape[0]}")
+    print(f"\033[32m[INFO - show3d]\033[0m Flattened mask shape {mask_flat.shape[0]}")
     filtered_vertices = mesh_vertices[mask_flat]
 
     dt = 0.0001 # Time step
@@ -61,7 +63,7 @@ def show3d(file_path, mask_exists, plot_pcd=False, plot_voxels=True, save_file=F
 
     # Visualize point cloud with velocity-based coloring
     if plot_pcd:
-        print("[INFO - show3d] Displaying colored point cloud...")
+        print("\033[32m[INFO - show3d]\033[0m Displaying colored point cloud...")
         vis = o3d.visualization.Visualizer()
         vis.create_window(window_name="Velocity Colored Point Cloud")
         vis.add_geometry(pcd)
@@ -74,11 +76,11 @@ def show3d(file_path, mask_exists, plot_pcd=False, plot_voxels=True, save_file=F
         # Create voxel grid from points
         voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=voxel_size)
 
-        print("[INFO - show3d] Displaying colored voxel grid...")
+        print("\033[32m[INFO - show3d]\033[0m Displaying colored voxel grid...")
         vis2 = o3d.visualization.Visualizer()
         vis2.create_window(window_name="Velocity Colored Voxel Cloud")
         vis2.add_geometry(voxel_grid)
-        print(f"[INFO - show3d] PCD shape {filtered_vertices.shape[0]}, Voxel {np.array(voxel_grid.get_voxels()).shape[0]}")
+        print(f"\033[32m[INFO - show3d]\033[0m PCD shape {filtered_vertices.shape[0]}, Voxel {np.array(voxel_grid.get_voxels()).shape[0]}")
 
     if plot_pcd or plot_voxels:
         max_frame = Nt # Nt
@@ -132,7 +134,7 @@ def show3d(file_path, mask_exists, plot_pcd=False, plot_voxels=True, save_file=F
         if save_file and plot_voxels:
             imageio.mimsave(save_image_path, images, fps=5)
     else:
-        print(f"[INFO - show3d] No plotting requested . . .")
+        print(f"\033[31m[INFO - show3d]\033[0m No plotting requested . . .")
 
 
 if __name__ == "__main__":

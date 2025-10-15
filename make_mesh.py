@@ -4,28 +4,43 @@ import matplotlib.pyplot as plt
 # from matplotlib.animation import FuncAnimation, PillowWriter
 from scipy.spatial import KDTree, ConvexHull
 # import time
-
-
-def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=None, plot=False):
+def get_physical_params(physical_params):
     # Unpack variables from packed params
-    if len(physical_params) == 6:
-        dt = physical_params[0]
-        lamb = physical_params[1]
-        mu = physical_params[2]
-        rho = physical_params[3]
-        gamma = physical_params[4]
-        default_normal_stress = physical_params[5]
+    # Assertion for physical parameters: all keys are present; if not, AssertionError with message raised
+    expected_keys = ["dt", "lamb", "mu", "rho", "gamma", "default_normal_stress"]
+
+    if all(key in physical_params for key in expected_keys):
+        dt = physical_params["dt"]
+        lamb = physical_params["lamb"]
+        mu = physical_params["mu"]
+        rho = physical_params["rho"]
+        gamma = physical_params["gamma"]
+        default_normal_stress = physical_params["default_normal_stress"]
+        return dt, lamb, mu, rho, gamma, default_normal_stress
     else:
-        print(f"[ERROR - make_mesh] Expected 6 arguments in physical_params, got {len(physical_params)}")
-    if len(mesh_params) == 6:
-        Nx = mesh_params[0]
-        Ny = mesh_params[1]
-        Nz = mesh_params[2]
-        Lx = mesh_params[3]
-        Ly = mesh_params[4]
-        Lz = mesh_params[5]
+        print(f"\033[91m[ERROR - mesh]\033[0m Missing keys: {[key for key in expected_keys if key not in physical_params]}.\n\033[91mAborting...\033[0m")
+        return None
+
+def get_mesh_params(mesh_params):
+    # Assertion for mesh parameters: all keys are present; if not, AssertionError with message raised
+    expected_keys = ["Nx", "Ny", "Nz", "Lx", "Ly", "Lz"]
+
+    if all(key in mesh_params for key in expected_keys):
+        Nx = mesh_params["Nx"]
+        Ny = mesh_params["Ny"]
+        Nz = mesh_params["Nz"]
+        Lx = mesh_params["Lx"]
+        Ly = mesh_params["Ly"]
+        Lz = mesh_params["Lz"]
+        return Nx, Ny, Nz, Lx, Ly, Lz
     else:
-        print(f"[ERROR - make_mesh] Expected 6 arguments in physical_params, got {len(mesh_params)}")
+        print(f"\033[91m[ERROR - mesh]\033[0m Missing keys: {[key for key in expected_keys if key not in mesh_params]}.\n\033[91mAborting...\033[0m")
+        return None
+    
+def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=None, plot=False):
+    
+    dt, lamb, mu, rho, gamma, default_normal_stress = get_physical_params(physical_params)
+    Nx, Ny, Nz, Lx, Ly, Lz = get_mesh_params(mesh_params)
 
     ##################################################################
     #                         LoadFile                               #
@@ -35,13 +50,13 @@ def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=N
         points = data['arr_0']
         # add 20 meters buffer to points
         points = points + buffer
-        print(f"[INFO - make_mesh] File {file_path} successfully loaded, with shape {points.shape}.")
+        print(f"\033[32m[INFO - make_mesh]\033[0m File {file_path} successfully loaded, with shape {points.shape}.")
     elif points is not None:
         points = points + buffer
-        print(f"[INFO - make_mesh] Points successfully loaded, with shape {points.shape}.")
+        print(f"\033[32m[INFO - make_mesh]\033[0m Points successfully loaded, with shape {points.shape}.")
 
     else:
-        print(f"[ERROR - make_mesh] No mesh or file_path provided, cannot continue.")
+        print(f"\033[91m[ERROR - make_mesh]\033[0m No mesh or file_path provided, cannot continue.")
         return None
 
     alpha2 = (lamb + 2 * mu) / rho # [m²/s²] Pressure wave velocity squared 
@@ -51,18 +66,18 @@ def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=N
     poisson = lamb / (2 * (lamb + mu)) # Also Poisson's ratio, should be equal to sigma
     youngs = ((3*lamb + 2*mu) * mu) / (lamb + mu) # [Pa] Young's Modulus
     bulk = lamb + 2/3 * mu # [Pa] Bulk modulus
-    print(f'[INFO - make_mesh] Alpha² = {alpha2:.2f}. beta² = {beta2:.2f} and sigma (poisson) = {sigma:.2f}, alpha/beta ratio = {alpha_beta:.2f}, poisson= {poisson:.2f}, youngs= {youngs:.2f}, bulk= {bulk:.2f}')
+    print(f'\033[32m[INFO - make_mesh]\033[0m Alpha² = {alpha2:.2f}. beta² = {beta2:.2f} and sigma (poisson) = {sigma:.2f}, alpha/beta ratio = {alpha_beta:.2f}, poisson= {poisson:.2f}, youngs= {youngs/1e9:.2f} GPa, bulk= {bulk/1e9:.2f} GPa')
 
     np.set_printoptions(precision=2) # When printing np.arrays, only show two decimals for clarity
 
     # Stability parameter: dt MUST be smaller than min_times
     min_time_beta = 0.3 * (Lx/(Nx-1))/np.sqrt(beta2) # 0.3 is safety factor
     min_time_alpha = 0.3 *(Ly/(Ny-1))/np.sqrt(alpha2) # 0.3 is safety factor
-    print(f"[INFO - make_mesh] Min time (beta, shear waves) {min_time_beta:.5f}, and (alpha, pressure waves) {min_time_alpha:.5f}")
+    print(f"\033[32m[INFO - make_mesh]\033[0m Min time (beta, shear waves) {min_time_beta:.5f}, and (alpha, pressure waves) {min_time_alpha:.5f}")
 
 
     if dt > min_time_beta or dt > min_time_alpha:
-        print(f"[WARNING - make_mesh] Dt {dt:.5f}s is larger than {min_time_beta:.5f} or than {min_time_alpha:.5f}")
+        print(f"\033[33m[WARNING - make_mesh]\033[0m Dt {dt:.5f}s is larger than {min_time_beta:.5f} or than {min_time_alpha:.5f}")
 
     Nt = int(t_max / dt) # Number of time iterations
 
@@ -134,7 +149,7 @@ def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=N
     source_index = 19
     source =  tuple([surface_ijk[0][source_index], surface_ijk[1][source_index], surface_ijk[2][source_index]])
 
-    print(f"[INFO - make_mesh] Source located at index {source[0]}, {source[1]}, {source[2]}")
+    print(f"\033[32m[INFO - make_mesh]\033[0m Source located at index {source[0]}, {source[1]}, {source[2]}")
     rho[source[0],source[1],source[2]] = 2901 #marker
     # print(f"density at source {rho[source[0],source[1],source[2]]}")
 
@@ -144,17 +159,20 @@ def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=N
 
     if plot:
         fig, ax = plt.subplots(1,1, figsize=(6,6), subplot_kw={'projection': '3d'})
-        ax.scatter(X[mask_exists], Y[mask_exists], Z[mask_exists], alpha=0.2)
-        ax.scatter(X[source], Y[source], Z[source], s=100, color='red')
+        ax.set_title("Check if mesh fits inside bounding box")
+        ax.scatter(X[mask_exists], Y[mask_exists], Z[mask_exists], alpha=0.2, label="Mesh")
+        ax.scatter(X[source], Y[source], Z[source], s=100, color='red', label="Point source")
 
-        ax.scatter(X[0,:,0], Y[0,:,0], Z[0,:,0])
-        ax.scatter(X[:,0,0], Y[:,0,0], Z[:,0,0])
-        ax.scatter(X[0,0,:], Y[0,0,:], Z[0,0,:])
+        ax.plot(X[0,:,0], Y[0,:,0], Z[0,:,0],'--r', label="Bounding box")
+        ax.plot(X[:,0,0], Y[:,0,0], Z[:,0,0],'--r')
+        ax.plot(X[0,0,:], Y[0,0,:], Z[0,0,:],'--r')
 
-        ax.scatter(X[-1,:,-1], Y[-1,:,-1], Z[-1,:,-1])
-        ax.scatter(X[:,-1,-1], Y[:,-1,-1], Z[:,-1,-1])
-        ax.scatter(X[-1,-1,:], Y[-1,-1,:], Z[-1,-1,:])
-        ax.set(xlabel='X', ylabel='Y', zlabel='Z')
+        ax.plot(X[-1,:,-1], Y[-1,:,-1], Z[-1,:,-1],'--r')
+        ax.plot(X[:,-1,-1], Y[:,-1,-1], Z[:,-1,-1],'--r')
+        ax.plot(X[-1,-1,:], Y[-1,-1,:], Z[-1,-1,:],'--r')
+        ax.set(xlabel='X [m]', ylabel='Y [m]', zlabel='Z [m]')
+        ax.legend()
+        plt.tight_layout()
         plt.show()
 
     # coords = [u, v, w]
@@ -187,17 +205,19 @@ def solver(dxs, vels, stresses, rho, source, Nt, gamma, physical_params, mesh_pa
     All of this is stored in the RAM until it is saved in the savefile
     function.
     '''
-    dt = physical_params[0]
-    lamb = physical_params[1]
-    mu = physical_params[2]
-    # rho = physical_params[3]
-    gamma = physical_params[4]
-    Nx = mesh_params[0]
-    Ny = mesh_params[1]
-    Nz = mesh_params[2]
+    # dt = physical_params[0]
+    # lamb = physical_params[1]
+    # mu = physical_params[2]
+    # # rho = physical_params[3]
+    # gamma = physical_params[4]
+    # Nx = mesh_params[0]
+    # Ny = mesh_params[1]
+    # Nz = mesh_params[2]
     # Lx = mesh_params[3]
     # Ly = mesh_params[4]
     # Lz = mesh_params[5]
+    dt, lamb, mu, __, gamma, __ = get_physical_params(physical_params)
+    Nx, Ny, Nz, __, __, __ = get_mesh_params(mesh_params)
     dx, dy, dz = dxs[0], dxs[1], dxs[2]
     udot, vdot, wdot = vels[0], vels[1], vels[2]
     txx, tyy, tzz, txy, txz, tyz = stresses[0], stresses[1], stresses[2], stresses[3], stresses[4], stresses[5]
@@ -205,10 +225,10 @@ def solver(dxs, vels, stresses, rho, source, Nt, gamma, physical_params, mesh_pa
     # t_source = 20
     for t in range(0,Nt-1):
         if t % 20 == 0:
-            print(f"[INFO - make_mesh] t={t:.4f}s, still busy...")
+            print(f"\033[32m[INFO - make_mesh]\033[0m t={t*dt:.4f}s, still busy...")
 
         if t < t_source:
-                print(f"[PERTURBATION] Displacement applied t= {t}")
+                print(f"\033[32m[INFO - make_mesh: PERTURBATION]\033[0m Displacement applied t= {t}")
                 # Pos[[],[],[]] is position of source
                 # pos = [np.array([int((Nx/2))-1]), np.array([int(Ny/2)-1]), np.array([int(Nz/2)-1])]
                 # pos = [np.array([5,-6]), np.array([int(Ny/2)-1,int(Ny/2)-1]), np.array([int(Nz/2)-1, int(Nz/2)-1])]
