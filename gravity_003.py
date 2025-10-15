@@ -7,24 +7,40 @@ from matplotlib import colormaps as cm
 import trimesh
 from scipy.spatial import KDTree
 
-cwd = os.getcwd()
-print(cwd)
-file_path = os.path.join(cwd, "3D models\\v2\\models\\dimorphos_decimated_25k.stl")
-file_path_data = os.path.join(cwd, "3D models\\v2\\data_folder\\voxel_dimorphos_decimated_2.5k.stl_n781_001.npz")
+cwd = os.getcwd() # Get the current working directory on user's machine
+print(f"Currently working from: {cwd}")
+stl_file = "dimorphos_decimated_25k.stl"
+models_path = os.path.join(cwd, "models")
+data_path = os.path.join(cwd, "data_folder")
+stl_path = os.path.join(models_path, stl_file)
+# file_path = os.path.join(cwd, "3D models\\v2\\models\\dimorphos_decimated_25k.stl")
+# file_path_data = os.path.join(cwd, "3D models\\v2\\data_folder\\voxel_dimorphos_decimated_2.5k.stl_n781_001.npz")
+voxels_file = "voxel_dimorphos_decimated_2.5k.stl_n781_001.npz"
+voxels_path = os.path.join(data_path, voxels_file)
+save_file = False
 
 computation_point = np.array([0, 0, 0])
-if os.path.exists(file_path):
-    print(f"ok")
+
+if os.path.exists(stl_path):
+    print(f"\033[32m[INFO - gravity]\033[0m .stl source file <{stl_file}>.")
+    scaled_stl_file = os.path.splitext(stl_file)[0] + "_scaled.stl"
+    scaled_stl_path = os.path.join(models_path, scaled_stl_file)
+    if os.path.exists(scaled_stl_path):
+        print(f"\033[32m[INFO - gravity]\033[0m Found scaled.stl file <{scaled_stl_file}>.")
+    else:
+        scale_factor = 1000
+        print(f"\033[32m[INFO - gravity]\033[0m Could not find scaled.stl file <{scaled_stl_file}>.\nScaling source file by factor {scale_factor}...")
+        mesh = trimesh.load(stl_path)
+        mesh.apply_scale(scale_factor)
+        mesh.export(scaled_stl_path)
+else:
+    print(f"\033[91m[ERROR - gravity]\033[0m .stl source file <{stl_file}> not found in <{models_path}>")
+
+
 density = 600 # [kg/m³]
 
-# mesh = trimesh.load(file_path)
-# scale_factor = 1000
-# mesh.apply_scale(scale_factor)
-file_path_export = os.path.join(cwd, "3D models\\v2\\models\\dimorphos_decimated_25k_scaled.stl")
-# mesh.export(file_path_export)
-# Correct instantiation
 dimorphos_polyhedron = Polyhedron(
-    polyhedral_source=[file_path_export],
+    polyhedral_source=[scaled_stl_path],
     density=density,
     normal_orientation=NormalOrientation.INWARDS,
     integrity_check=PolyhedronIntegrity.HEAL,
@@ -115,7 +131,7 @@ if do_3d:
 
 
     # Make mask for voxel centres
-    data = np.load(file_path_data) # Load the numpyzip file
+    data = np.load(voxels_path) # Load the numpyzip file
     points = data['arr_0']
     grid_points = np.vstack([X.ravel(), Y.ravel(), Z.ravel()]).T
     tree = KDTree(points)
@@ -134,9 +150,21 @@ if do_3d:
     ax.scatter(X[mask_exists], Y[mask_exists], Z[mask_exists], c=accelerations_norm[mask_exists], cmap="terrain", s=20, alpha=1)
     ax.set(xlabel=f"x ({dim[0]}) [m]", ylabel=f"y ({dim[1]}) [m]", zlabel=f"z ({dim[2]}) [m]")
 
-file_path_grav_save = os.path.join(cwd, "3D models\\v2\\data_folder\\gravity_magnitude_001.npz")
 
-np.savez(file_path_grav_save, gravity_magnitude=accelerations_norm)
+# Save gravitational acceleration magnitude into numpyz file.
+gravity_file = "gravity_magnitude_001.npz"
+gravity_path = os.path.join(data_path, gravity_file)
+
+if not os.path.exists(gravity_path) and save_file:
+    print(f"\033[32m[INFO - gravity]\033[0m Saving acceleration_norm <{accelerations_norm.shape}> <shape> at <{gravity_path}>...")   
+    np.savez(gravity_path, gravity_magnitude=accelerations_norm)
+    print(f"\033[32m[INFO - gravity]\033[0m Successfully saved acceleration_norm <{accelerations_norm.shape}> <shape> at <{gravity_path}>...")  
+else: 
+    print(f"\033[32m[INFO - gravity]\033[0m acceleration_norm <{accelerations_norm.shape}> <shape> already exists or no save requested.")   
+     
+# file_path_grav_save = os.path.join(cwd, "3D models\\v2\\data_folder\\gravity_magnitude_001.npz")
+
+
 plt.show()
 
 
