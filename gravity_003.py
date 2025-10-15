@@ -13,8 +13,6 @@ stl_file = "dimorphos_decimated_25k.stl"
 models_path = os.path.join(cwd, "models")
 data_path = os.path.join(cwd, "data_folder")
 stl_path = os.path.join(models_path, stl_file)
-# file_path = os.path.join(cwd, "3D models\\v2\\models\\dimorphos_decimated_25k.stl")
-# file_path_data = os.path.join(cwd, "3D models\\v2\\data_folder\\voxel_dimorphos_decimated_2.5k.stl_n781_001.npz")
 voxels_file = "voxel_dimorphos_decimated_2.5k.stl_n781_001.npz"
 voxels_path = os.path.join(data_path, voxels_file)
 save_file = False
@@ -161,9 +159,6 @@ if not os.path.exists(gravity_path) and save_file:
     print(f"\033[32m[INFO - gravity]\033[0m Successfully saved acceleration_norm <{accelerations_norm.shape}> <shape> at <{gravity_path}>...")  
 else: 
     print(f"\033[32m[INFO - gravity]\033[0m acceleration_norm <{accelerations_norm.shape}> <shape> already exists or no save requested.")   
-     
-# file_path_grav_save = os.path.join(cwd, "3D models\\v2\\data_folder\\gravity_magnitude_001.npz")
-
 
 plt.show()
 
