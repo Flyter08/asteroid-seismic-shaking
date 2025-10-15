@@ -56,7 +56,7 @@ def plot_grid_2d(X, Y, z, title, filename=None, labels=("$x$", "$y$"), limits=(-
         None
 
     """
-    print("Plotting Grid 2D")
+    print("\033[32m[INFO - mesh_plotting]\033[0m Plotting Grid 2D")
     fig, ax = plt.subplots(figsize=(5, 5))
 
     Z = z.reshape((len(X), len(Y)))
