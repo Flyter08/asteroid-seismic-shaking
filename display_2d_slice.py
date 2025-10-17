@@ -5,126 +5,9 @@ from matplotlib.colors import SymLogNorm, LogNorm
 from matplotlib.animation import FuncAnimation, PillowWriter
 import matplotlib as mpl
 from IPython.display import HTML
-mpl.rcParams['animation.embed_limit'] = 50  # Increase limit to 50 MB, for example
+mpl.rcParams['animation.embed_limit'] = 100  # Increase limit to 50 MB, for example
 
 '''This script is made to load save numpyzip files of arrays udot, vdot, wdot and plot them'''
-
-# def get_data(model_name, vels, physical_params, target_axis=0, target_index=None, colormap='terrain', interp='gaussian', save_file=False):
-#     '''Need to add a way to read from file if vels is None
-#     This function should just unpack data and prepare for plot'''
-#     udot, vdot, wdot = vels[0], vels[1], vels[2]
-#     dt = physical_params[0]
-
-    
-
-#     # Extract -x,-y,-z values from data from the savefile
-#     # udot, vdot, wdot = data['arr_0'], data['arr_1'], data['arr_2'] # velocities
-
-#     # Find the shape of the data in savefile
-#     Nx, Ny, Nz, Nt = udot.shape[1], vdot.shape[2], wdot.shape[3], udot.shape[0]
-#     # dt = 0.0001 # Time step
-
-#     # 3D geometric sum for velocities at each node (this is for init)
-#     # target_axis = 1 # x = 0, y = 1, z = 2
-#     if target_index is None:
-#         target_index = int(Nz/2) #int(Nz/2)#1 #int(Nz/2) # Plane index number to plot
-#     indexer = [slice(None), slice(None), slice(None)] # Create slice objects to slice through 3D x-y-z
-#     indexer[target_axis] = target_index # Select the plane of interest along the axis of choice
-
-#     indexer_full = [slice(None)] + indexer # Look through all times
-#     indexer_t0 = [0] + indexer # indexer for t=0
-#     velocity_magnitude = np.linalg.norm(np.stack([udot[tuple(indexer_t0)],
-#                                                 vdot[tuple(indexer_t0)],
-#                                                 wdot[tuple(indexer_t0)]],
-#                                                 axis=0), axis=0)
-
-#     # print(f"[DEBUG] index full {tuple(indexer_full)}")
-#     # Stores all the velocities in x-,y-,z-direction on a centred plane
-#     velocities = [udot[tuple(indexer_full)], vdot[tuple(indexer_full)], wdot[tuple(indexer_full)]]
-
-#     # Find the minimum and maximum velocities for scaling the colourbars
-#     minmax = [[np.min(velocities[0][:]), np.max(velocities[0][:])],
-#             [np.min(velocities[1][:]), np.max(velocities[1][:])],
-#             [np.min(velocities[2][:]), np.max(velocities[2][:])]]
-    
-#     max_values = list(np.max(voxel_centres, axis=0))
-#     # min_values = list(np.min(voxel_centres, axis=0))
-
-#     # Magnitude colourbar scaling
-#     mag_max = max([minmax[0][1], minmax[1][1], minmax[2][1]])
-#     print(f"velocities max {np.max(velocities[0][:])}")
-#     print(f"[DEBUG] mag max {mag_max}")
-#     # Set the labels and plot titles iteratively
-#     xlabels = ['x-nodes [#]','x-nodes [#]','x-nodes [#]']
-#     ylabels = ['y-nodes [#]','y-nodes [#]','z-nodes [#]']
-#     subtitles = [r'$\dot u$ [m/s]', r'$\dot v$ [m/s]', r'$\dot w$ [m/s]']
-
-#     vel_plots = [] # Initiates vel_plots to store imageAxes for animation function
-#     for i, axi in enumerate(ax.flat[:3]): # Loops through the 3 axis x,y,z for the 2D plots
-#         min_val, max_val = minmax[i][0], minmax[i][1] # Colour map scaling
-#         # imShow init, symetrical log scales, with interpolation method 'gaussian'
-#         vel_plot = axi.imshow(velocities[i][0], cmap=colormap, origin='lower',
-#                             norm=SymLogNorm(linthresh=0.00001, linscale=0.00001,
-#                                             vmin=min_val, vmax=max_val, base=10), interpolation=interp)
-#         colorbar = fig.colorbar(vel_plot, ax=axi, label="[m/s]") # Adds colour bars
-#         # Plot setup: x-y-labels, plot title
-#         axi.set_xlabel(xlabels[i])
-#         axi.set_ylabel(ylabels[i])
-#         axi.set_title(subtitles[i])
-#         vel_plots.append(vel_plot) # Append imageAxis for animation function
-
-
-#     # Velocity magnitude plot, logarithmic plot, starting close to 0, interpolation
-#     mag_plot = ax[1,1].imshow(velocity_magnitude, cmap=colormap, origin='lower',
-#                             norm=LogNorm(vmin=0.001, vmax=mag_max, clip=True), interpolation=interp)
-#     fig.colorbar(mag_plot, ax=ax[1,1], label="[m/s]")
-#     # Plot setup:
-#     ax[1,1].set_xlabel(xlabels[0])
-#     ax[1,1].set_ylabel(ylabels[0])
-#     ax[1,1].set_title(r"Vel. mag. 3D [m/s]")
-
-#     # suptitle_text = fig.suptitle(f"file: {file_name}") # Sets title to figure with filename
-#     suptitle_text = plt.suptitle(t='', fontsize= 12)
-# def update(frame):
-#     '''Animation function:
-#     Takes frame as index variable used to loop through all 'time' instances of velocities
-#     Updates the imageAxes at each loop call with set_data
-
-#     Returns:
-#     result (matplotlib axes handles)
-#     This is important for when blit == True.
-#     blit == True optimises plotting by only updating necessary parts of plots.
-#     '''
-#     indexer_frame = [frame+1] + indexer
-#     velocity_magnitude = np.linalg.norm(np.stack([udot[tuple(indexer_frame)],
-#                                                 vdot[tuple(indexer_frame)],
-#                                                 wdot[tuple(indexer_frame)]],
-#                                                 axis=0), axis=0)
-#     suptitle_text.set_text('file:{} \n t={:.4f}'.format(file_name,frame*dt))
-#     # ax[0,0].set_title(rf'$\dot u$ [m/s] t={frame*dt:.4f}')
-#     for i, vel_plot in enumerate(vel_plots):
-#         vel_plot.set_data(velocities[i][frame,:,:])
-            
-#     mag_plot.set_data(velocity_magnitude)
-
-#     result = vel_plots + [mag_plot]
-#     return result
-
-    # Play animation: On fig, applies function update with time 0:Nt, with refresh every 1ms, 
-    # blit=True for faster rendering
-    # frames_to_display = np.arange(50, int(Nt/2), 4)
-    # ani = FuncAnimation(fig, update, frames=frames_to_display, interval=1, blit=False, cache_frame_data=True)
-    # plt.tight_layout() # Arrange plots to avoid overlaps
-
-    # # To save the animation using Pillow as a gif
-    # if save_file:
-    #     print(f"[INFO] Saving file with name '{file_name}.gif'.")
-    #     writer = PillowWriter(fps=5, metadata=dict(artist='Maxime Larguet Sept. 2025'), bitrate=2000)
-    #     ani.save(f'{file_name}_002.gif', writer=writer)
-    #     print(f"[INFO] File saved successfully.")
-
-
-    # plt.show()
 
 def update_vel(frame, vels, indexer, vel_plots):
     '''Animation function:
@@ -185,10 +68,14 @@ def vel_slice(vels, frames_to_show=np.arange(1,100,2), target_axis=0, target_ind
             [np.min(vels[1][:]), np.max(vels[1][:])],
             [np.min(vels[2][:]), np.max(vels[2][:])]]
         velocities_t0 = get_vel(indexer_t0, vels)
+        
         vel_plots = [] # Initiates vel_plots to store imageAxes for animation function
         for i, axi in enumerate(ax.flat): # Loops through the 3 axis x,y,z for the 2D plots
 
             min_val, max_val = minmax[i][0], minmax[i][1] # Colour map scaling
+            # velocities_t0[i] = np.ma.masked_where(velocities_t0[i] ==0, velocities_t0[i])
+            # cmap = plt.cm.RdBu
+            # cmap.set_bad('black')
 
             vel_plot = axi.imshow(velocities_t0[i], cmap=colormap, origin='lower',
                                 norm=SymLogNorm(linthresh=0.00001, linscale=0.00001,
@@ -215,12 +102,12 @@ def update_mag(frame, vels, indexer, mag_plots, target_axis, target_index):
     blit == True optimises plotting by only updating necessary parts of plots.
     '''
 
-    for i, vel_plot in enumerate(mag_plots):
+    for i, mag_plot in enumerate(mag_plots):
         indexer = [slice(None), slice(None), slice(None)] # Create slice objects to slice through 3D x-y-z
         indexer[target_axis[i]] = target_index
         indexer_frame = [frame] + indexer # indexer 
         mag_frame = get_mag(indexer_frame, vels)
-        vel_plot.set_data(mag_frame)
+        mag_plot.set_data(mag_frame)
 
     result = mag_plots
     return result
@@ -242,11 +129,15 @@ def mag_slice(vels, frames_to_show=np.arange(1,100,2), target_axis=[0], target_i
         indexer[target_axis[i]] = target_index # Select the plane of interest along the axis of choice
         indexer_t0 = [250] + indexer # indexer for t=1
         mag_t0 = get_mag(indexer_t0, vels)
-        
-        min_val, max_val = np.min(mag_t0), np.max(mag_t0)
 
-        mag_plot = axi.imshow(mag_t0, cmap=colormap, origin='lower',
-                            norm=LogNorm(vmin=0.001, vmax=max_val, clip=True), interpolation=interp)
+        mag_t0_masked = np.ma.masked_where(mag_t0==0.0, mag_t0)
+        
+        min_val, max_val = np.min(mag_t0_masked), np.max(mag_t0_masked)
+        cmap = plt.get_cmap(colormap)
+        cmap.set_under(color='white')
+        norm = LogNorm(vmin=0.001, vmax=max_val, clip=False)
+        mag_plot = axi.imshow(mag_t0_masked, cmap=cmap, origin='lower',
+                            norm=norm, interpolation=interp)
         colorbar = fig.colorbar(mag_plot, ax=axi, label="[m/s]") # Adds colour bars
         # Plot setup: x-y-labels, plot title
         axi.set_xlabel(xlabels[i])
@@ -255,14 +146,110 @@ def mag_slice(vels, frames_to_show=np.arange(1,100,2), target_axis=[0], target_i
         mag_plots.append(mag_plot) # Append imageAxis for animation function
     
     ani = FuncAnimation(fig, update_mag, fargs=(vels, indexer, mag_plots, target_axis, target_index), frames=frames_to_show, interval=10, blit=True, cache_frame_data=True)
-    plt.tight_layout() # Arrange plots to avoid overlaps
+    # Arrange plots to avoid overlaps
+    plt.tight_layout() 
+
     return HTML(ani.to_jshtml())
+    
+def get_fft(vels, frames_to_show, target_axis=[0], target_index=None, coords=[None,None]):
+    
+    if target_index is None:
+        Nz = vels[2].shape[3]
+        target_index = int(Nz/2) #int(Nz/2)#1 #int(Nz/2) # Plane index number to plot
+    if coords is None:
+        coords = [int(Nz/2), int(Nz/2)]
+
+    indexer = [slice(None), slice(None), slice(None)] # Create slice objects to slice through 3D x-y-z
+    indexer[target_axis[0]] = target_index # Select the plane of interest along the axis of choice
+
+
+    mags_ = []
+    for i in frames_to_show-1:
+        indexer_t = [i] + indexer #last frame # STOOPID
+        mags_.append(get_mag(indexer_frame=indexer_t, vels=vels)[coords[0], coords[1]])
+    # print(mags_)
+    fft_mag = np.fft.fft(mags_)
+    fft_freq_mag = np.fft.fftfreq(len(mags_), 0.0001)
+    fig_fft, axfft = plt.subplots(1, 1, figsize=(6,6)) 
+    fft =axfft.semilogy(fft_freq_mag, np.abs(fft_mag))
+    axfft.set(xlabel="Frequency [Hz]", ylabel="Amplitude", title=f"Frames:{frames_to_show[0]}-{frames_to_show[-1]}\nCoords {coords[0],coords[1]}")
+    axfft.grid("minor")
+    from scipy.signal import find_peaks
+    # peaks, _ = find_peaks(np.abs(fft_mag), height=1e1, distance=150)
+    peaks, _ = find_peaks(np.abs(fft_mag), prominence=5, distance=50)
+    print(f"Frequencies peak {np.unique(np.abs(fft_freq_mag[peaks]))} Hz")
+    # Draw vertical lines for each detected peak in the Sun's FFT
+    for peak in peaks:
+        axfft.axvline(x=fft_freq_mag[peak], color="red", linestyle="--", label="Peaks")
+
+    # instead lets plot the magnitude of that singular point over time
+    # axfft.plot(frame_to_display*0.0001, mags_)
+
+
+def get_fft_slice(vels, frames_to_show, target_axis=[0], target_index=None):
+    from scipy.signal import find_peaks # Use scipy's signal analysis for peaks
+
+    if target_index is None:
+        Nz = vels[2].shape[3]
+        target_index = int(Nz/2) #int(Nz/2)#1 #int(Nz/2) # Plane index number to plot
+    
+    colormap="plasma"
+    cmap = plt.get_cmap(colormap).copy()
+    fig_fft, axfft = plt.subplots(1, len(target_axis), figsize=(4*len(target_axis),4))
+    fig_fft.suptitle(f"FFT of slice(s) through node <{Nz}> and frames <{frames_to_show[0]}-{frames_to_show[-1]}>: Dominant peaks")
+
+    for k in range(len(target_axis)):
+        print(f"\033[32m[INFO - get_fft_slice]\033[0m Working axis {k}")
+        indexer = [slice(None), slice(None), slice(None)] # Create slice objects to slice through 3D x-y-z
+        indexer[target_axis[k]] = target_index # Select the plane of interest along the axis of choice
+
+
+        mags_ = []
+        peaks_freq = np.empty([Nz, Nz])
+        for t in frames_to_show-1: # loop through all times
+            indexer_t = [t] + indexer
+            mags_.append(get_mag(indexer_frame=indexer_t, vels=vels)) # Get all magnitudes of all times and all nodes
+        mags_ = np.array(mags_)
+        # print(f"mags_ shape {mags_.shape}")
+        # print(f"peaks_freq.shape {peaks_freq.shape}")
+            
+
+        for i in range(Nz): # do ffts for each node
+            for j in range(Nz):
+                fft_mag = np.fft.fft(mags_[:,i,j])
+                fft_freq_mag = np.fft.fftfreq(len(mags_[:,i,j]), 0.0001)
+                peaks, _ = find_peaks(np.abs(fft_mag), prominence=5, distance=50)
+                # print(f"{i},{j} peak freq {np.unique(np.abs(fft_freq_mag[peaks]))}")
+                try:
+                    peaks_freq[i,j] = np.unique(np.abs(fft_freq_mag[peaks]))[-1]
+                except:
+                    peaks_freq[i,j] = np.nan
+                # print(f"{i},{j} peak freq {peaks_freq[i,j]}")
+                
+                
+         
+        fft = axfft[k].imshow(peaks_freq, origin="lower", cmap=cmap, vmin=np.nanmin(peaks_freq), vmax=np.nanmax(peaks_freq))
+        axfft[k].set_title(f"Axis {target_axis[k]}")
+        cbar = fig_fft.colorbar(fft, ax=axfft[k], shrink=1)
+    plt.tight_layout
+    
+
 
 if __name__ == "__main__":
-    # vel_slice()
-    pass
 
-# order of operations here:
-# call vel_slice()
-# vel_slice calls get_data() need get data???
-# vel_slice calls get_vel() and/or get_mag() passing the vels from get_data
+    axis_to_display = [0, 1, 2] # 0 = x, 1 = y, 2 = z
+    start_frame = 1
+    end_frame = 5000#Nt#int(Nt/2)
+    interval = 1
+    frame_to_display = np.arange(start_frame, end_frame, interval)
+    cwd = os.getcwd()
+    velocity_file = f"vels_sphere_01_n2308_002.npz"
+    data_path = os.path.join(cwd, "data_folder")
+    velocity_path = os.path.join(data_path, velocity_file)
+    data = np.load(velocity_path)
+    vels = data["arr_0"]
+    test_coords = [[15,3],[10,15], [15,15], [20,15]]
+    # for i in range(len(test_coords)):
+        # get_fft(vels, frame_to_display, axis_to_display, target_index=None, coords=test_coords[i])
+    get_fft_slice(vels, frame_to_display, axis_to_display, target_index=None)
+    plt.show()

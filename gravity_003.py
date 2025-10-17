@@ -7,7 +7,7 @@ from matplotlib import colormaps as cm
 import trimesh
 from scipy.spatial import KDTree
 
-def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl", voxels_file="voxel_dimorphos_decimated_2.5k.stl_n781_001.npz", save_file=False, do_2d=True, do_3d=True, plot=True):
+def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl", voxels_file="voxel_dimorphos_decimated_2.5k.stl_n781_001.npz", save_file=False, do_2d=True, do_3d=True, plot=True, scale_factor=1):
     cwd = os.getcwd() # Get the current working directory on user's machine
     print(f"\033[32m[INFO - gravity]\033[0m Currently working from: {cwd}")
 
@@ -27,14 +27,14 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
         if os.path.exists(scaled_stl_path):
             print(f"\033[32m[INFO - gravity]\033[0m Found scaled.stl file <{scaled_stl_file}>.")
         else:
-            scale_factor = 1000
+            # scale_factor = 1000
             print(f"\033[32m[INFO - gravity]\033[0m Could not find scaled.stl file <{scaled_stl_file}>.\nScaling source file by factor {scale_factor}...")
             mesh = trimesh.load(stl_path)
             mesh.apply_scale(scale_factor)
             mesh.export(scaled_stl_path)
     else:
         print(f"\033[91m[ERROR - gravity]\033[0m .stl source file <{stl_file}> not found in <{models_path}>")
-
+    mesh = trimesh.load(scaled_stl_path)
     print(f"\033[32m[INFO - gravity]\033[0m Homogeneous density set to {density} [kg/m³].")
     
     Nx, Ny, Nz = mesh_params["Nx"], mesh_params["Ny"], mesh_params["Nz"]
@@ -45,6 +45,7 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
         polyhedral_source=[scaled_stl_path],
         density=density,
         normal_orientation=NormalOrientation.INWARDS,
+        # normal_orientation=NormalOrientation.OUTWARDS,
         integrity_check=PolyhedronIntegrity.HEAL,
         metric_unit=MetricUnit.METER
     )
@@ -60,7 +61,10 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
     evaluable_dimorphos = GravityEvaluable(dimorphos_polyhedron)
     # print(evaluable_dimorphos)
     # We use for this plot a more coarse grid to improve the visualization
-    dim = np.array(dim) # [m] Actual size of asteroid in metres
+
+    # Find geometric centre of object
+    extents = mesh.extents
+    dim = np.array(extents) # [m] Actual size of asteroid in metres
     if do_2d:
         dimorphos_centre = dim/2
         print(f"\033[32m[INFO - gravity]\033[0m Dimorphos centre located at {dimorphos_centre} [m]")
@@ -154,7 +158,7 @@ def get_gravity(dim, density, mesh_params, stl_file="dimorphos_decimated_25k.stl
 
 
     # Save gravitational acceleration magnitude into numpyz file.
-    gravity_file = "gravity_magnitude_001.npz"
+    gravity_file = "gravity_magnitude_002.npz"
     gravity_path = os.path.join(data_path, gravity_file)
 
     if not os.path.exists(gravity_path) and save_file:

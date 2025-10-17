@@ -1,4 +1,4 @@
-# import os
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 # from matplotlib.animation import FuncAnimation, PillowWriter
@@ -37,7 +37,7 @@ def get_mesh_params(mesh_params):
         print(f"\033[91m[ERROR - mesh]\033[0m Missing keys: {[key for key in expected_keys if key not in mesh_params]}.\n\033[91mAborting...\033[0m")
         return None
     
-def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=None, plot=False):
+def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=None, plot=False, do_gravity=False, data_path=None):
     
     dt, lamb, mu, rho, gamma, default_normal_stress = get_physical_params(physical_params)
     Nx, Ny, Nz, Lx, Ly, Lz = get_mesh_params(mesh_params)
@@ -172,6 +172,7 @@ def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=N
         ax.plot(X[-1,-1,:], Y[-1,-1,:], Z[-1,-1,:],'--r')
         ax.set(xlabel='X [m]', ylabel='Y [m]', zlabel='Z [m]')
         ax.legend()
+        ax.axis("equal")
         plt.tight_layout()
         plt.show()
 
@@ -179,6 +180,55 @@ def mesh(points, physical_params, mesh_params, t_max=0.1, buffer=20, file_path=N
     dxs = [dx, dy, dz]
     vels = [udot, vdot, wdot]
     stresses = [txx, tyy, tzz, txy, txz, tyz]
+
+    if do_gravity:
+        if data_path is not None:
+            gravity_file = "gravity_magnitude_002.npz"
+            gravity_path = os.path.join(data_path, gravity_file)
+            grav_data = np.load(gravity_path) # Load the numpyzip file
+            gravity = grav_data['gravity_magnitude']
+            print(f"\033[32m[INFO - make_mesh]\033[0m File {gravity_file} successfully loaded, with shape {gravity.shape}.")
+        else:
+            print(f"\033[91m[ERROR - make_mesh]\033[0m No gravity_file or data_path provided, cannot continue gravity.")
+        
+
+        tolerance = 0.8e-6
+        cg_index = np.where(np.isclose(gravity, 0, atol=tolerance))
+        print(f"\033[32m[INFO - mesh_plotting]\033[0m CG located at index {cg_index}")
+        cg_coords = np.array([x[cg_index[0]], y[cg_index[1]], z[cg_index[2]]]).T
+        # print(f"cg coords {cg_coords}")
+        voxels = np.stack([X,Y,Z], axis=1)
+        # print(f"voxelsshapes {points.shape}")
+        print(f"Gridpoints shape {grid_points.shape}, X.shape {X.shape}")
+        grid_points = grid_points.reshape(-1,3)
+        print(f"gridpoints.reshape {grid_points.shape}")
+        # grid_points[~mask_exists] = np.nan
+        distances_to_cg = np.linalg.norm(grid_points - cg_coords, axis=1)
+        print(f"{distances_to_cg.max()}")
+        # problem is because i need to get rid of distance outside the mask such that depth at surface =0
+        depth = abs(distances_to_cg - distances_to_cg.max())
+        print(f"Depths max {depth.max()}, depth min {depth.min()}")
+        print(depth)
+        print(f"grid_points {grid_points.shape}")
+        print(f"xhspae {X.shape}")
+        depth_matrix = depth.reshape(X.shape)
+        print(f"Depth matrix {depth_matrix.shape}")
+        depth_matrix[~mask_exists] = 0
+        print(f"Depths max {np.max(depth_matrix)}, depth min {np.min(depth_matrix)}")
+        gravity = gravity[:-1,:-1,:-1] # remove last row column..
+        print(f"gravity shape {gravity.shape}")
+        print(f"rho.shape {rho.shape}")
+        # print(f"X.shape masked {X[mask_exists].shape}")
+        pressure_matrix = rho * gravity * depth_matrix
+        print(f"pressure.shape {pressure_matrix.shape}")
+        print(f"pressure max {np.max(pressure_matrix)}, min {np.min(pressure_matrix)}")
+        figp, axp = plt.subplots(1,3,figsize=(6,6))
+        surf = axp[0].imshow(pressure_matrix[:,:,int(Nz/2)])
+        surf2 = axp[1].imshow(depth_matrix[:,:,int(Nz/2)])
+        surf3 = axp[2].imshow(gravity[:,:,int(Nz/2)])
+        cbar = figp.colorbar(mappable=surf, ax=axp)
+        plt.show()
+
     return dxs, vels, stresses, rho, source, Nt, gamma, mask_exists
 
 
@@ -281,18 +331,38 @@ def solver(dxs, vels, stresses, rho, source, Nt, gamma, physical_params, mesh_pa
 
 if __name__ == "__main__":
     # Physical parameters:
-    dt = 0.001
-    lamb = 3.1050e10 # [Pa] Lamé parameter
-    mu = 3.3075e10 # [Pa] Shear modulus
-    rho = 2900 # [kg/m³] Density
-    gamma = 0.005 # s-1 Dissipation factor, typical: 0.05 < gamma < 0.1
-    default_normal_stress = 20e6 # [MPa] Default normal stress put throughout the model
-    physical_params = [dt, lamb, mu, rho, gamma, default_normal_stress]
+    mesh_params = {
+    "Nx": int(30), # number of mesh nodes on the x-,y- & z-axis
+    "Ny": int(30), # [m] Physical dimension, max length in m of mesh. Needs to be greater than dim
+    "Nz": int(30),
+    "Lx": int(170),
+    "Ly": int(170),
+    "Lz": int(170)
+    }
 
-    # Mesh parameters:
-    Nx, Ny, Nz = 50, 50, 50 # number of mesh nodes on the x-,y- & z-axis
-    Lx, Ly, Lz = 220, 220, 220 # [m] Physical dimension, max length in m of mesh. Needs to be greater than dim
-    mesh_params = [Nx, Ny, Nz, Lx, Ly, Lz]
-
+    # Physical parameters:
+    physical_params = {
+        "dt":                    0.0001,    # [s] Time step
+        "lamb":                  3.1050e10, # [Pa] Lamé parameter
+        "mu":                    3.3075e10, # [Pa] Shear modulus
+        "rho":                   600,       # [kg/m³] Density
+        "gamma":                 0.0,     # [1/s] Dissipation factor, typical: 0.05 < gamma < 0.1
+        "default_normal_stress": 5e6,      # [MPa] Default normal stress put throughout the model
+        }
     
-    mesh(points=None, physical_params=physical_params, mesh_params=mesh_params, t_max=0.1, buffer=20, file_path=None, plot=False)
+    cwd = os.getcwd()
+    data_path = os.path.join(cwd, "data_folder")
+    voxel_file = "voxel_sphere_01_n2308_001.npz"
+    voxel_path = os.path.join(data_path, voxel_file)
+    
+    mesh(
+        points=None,
+        physical_params=physical_params,
+        mesh_params=mesh_params,
+        t_max=0.1,
+        buffer=25,
+        file_path=voxel_path,
+        plot=True,
+        do_gravity=True,
+        data_path=data_path,
+        )

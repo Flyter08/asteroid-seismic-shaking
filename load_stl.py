@@ -5,8 +5,17 @@ import trimesh
 
 def load_model(model_name, stl_path, data_path, dim, scale_factor=None, voxel_pitch=0.015, save_file=False, plot=False):
     mesh = trimesh.load(stl_path)
+    extents = mesh.extents
+    print(f"\033[32m[INFO - load_stl]\033[0m .stl starting dimensions {extents}.")
+    if scale_factor is None and dim is None:
+        voxel_pitch = np.mean(extents)/15
+        voxelized = mesh.voxelized(pitch=voxel_pitch)  # pitch = size of each voxel in mesh units
+        # voxelized() only creates voxels on the surface
+        voxelized = voxelized.fill() # Add voxels inside
+        voxel_centres = np.float16(voxelized.points) 
+    
     # mesh.show() # Show the mesh in 3D with openGL
-    if scale_factor is not None and dim == None:
+    elif scale_factor is not None and dim == None:
         mesh.apply_scale(scale_factor)
         
         voxelized = mesh.voxelized(pitch=voxel_pitch*scale_factor)  # pitch = size of each voxel in mesh units
@@ -50,14 +59,19 @@ def load_model(model_name, stl_path, data_path, dim, scale_factor=None, voxel_pi
         fig.suptitle(f"Generated mesh from voxelized:\n{model_name}")
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(voxel_centres[:,0],voxel_centres[:,1],voxel_centres[:,2])
+        ax.axis("equal")
         plt.show()
 
     return voxel_centres
 
 
 if __name__ == "__main__":
-    folder = "3D models\\v2\\models"
-    file_name = "dimorphos_decimated_2.5k.stl"
-    file_path = os.path.join(folder, file_name)
-    dim = [177, 174, 116] # Dimorphos dimensions
-    load_model(file_name, file_path, dim, save_file=False, plot=True)
+    # dim = [177, 174, 116] # Dimorphos dimensions
+
+    cwd = os.getcwd()
+    model_file = "sphere_01.STL"
+    model_path = os.path.join(cwd, "models", model_file)
+    data_path = os.path.join(cwd, "data_folder")
+    
+
+    load_model(model_file, model_path, data_path=data_path, dim=None, scale_factor=None, save_file=False, plot=True)
